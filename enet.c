@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <lua5.1/lua.h>
-#include <lua5.1/lualib.h>
-#include <lua5.1/lauxlib.h>
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
 
 #include <enet/enet.h>
 
@@ -13,7 +13,6 @@
 
 #define check_peer(l, idx)\
 	*(ENetPeer**)luaL_checkudata(l, idx, "enet_peer")
-
 
 /**
  * Parse address string, eg:
