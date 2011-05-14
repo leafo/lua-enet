@@ -1,9 +1,10 @@
 
 #include <stdlib.h>
+#include <string.h>
 
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lualib.h>
+#include <lua5.1/lauxlib.h>
 
 #include <enet/enet.h>
 
@@ -46,7 +47,7 @@ static void parse_address(lua_State *l, const char *addr_str, ENetAddress *addre
 
 	if (host_i == 0) luaL_error(l, "Failed to parse address");
 	if (port_i == 0) luaL_error(l, "Missing port in address");
-	
+
 	if (strcmp("*", host_str) == 0) {
 		address->host = ENET_HOST_ANY;
 	} else {
@@ -78,7 +79,7 @@ static void push_peer(lua_State *l, ENetPeer *peer) {
 
 		lua_pushlightuserdata(l, peer);
 		lua_pushvalue(l, -2);
-		
+
 		lua_settable(l, -4);
 	}
 	lua_remove(l, -2); // remove enet_peers
@@ -96,8 +97,8 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 	*channel_id = 0;
 
 	int argc = lua_gettop(l);
-	if (argc >= idx+2) { /* flags */ } 
-	if (argc >= idx+1) { 
+	if (argc >= idx+2) { /* flags */ }
+	if (argc >= idx+1) {
 		*channel_id = luaL_checkint(l, 3);
 	}
 
@@ -123,12 +124,12 @@ static int host_create(lua_State *l) {
 	int have_address = 1;
 	ENetAddress address;
 
-	if (lua_gettop(l) == 0 || lua_isnil(l, 1)) { 
+	if (lua_gettop(l) == 0 || lua_isnil(l, 1)) {
 		have_address = 0;
 	} else {
 		parse_address(l, luaL_checkstring(l, 1), &address);
 	}
-	
+
 	switch (lua_gettop(l)) {
 		case 5:
 			out_bandwidth = luaL_checkint(l, 5);
@@ -167,7 +168,7 @@ static int host_service(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
 	int timeout = 0;
 
-	if (lua_gettop(l) > 1) 
+	if (lua_gettop(l) > 1)
 		timeout = luaL_checkint(l, 2);
 
 	ENetEvent event;
@@ -189,10 +190,11 @@ static int host_service(lua_State *l) {
 			lua_pushstring(l, "disconnect");
 			break;
 		case ENET_EVENT_TYPE_RECEIVE:
-			lua_pushlstring(l, event.packet->data, event.packet->dataLength);
+			lua_pushlstring(l, (const char *)event.packet->data, event.packet->dataLength);
 			lua_setfield(l, -2, "data");
 			lua_pushstring(l, "receive");
 			break;
+		case ENET_EVENT_TYPE_NONE: break;
 	}
 	lua_setfield(l, -2, "type");
 	return 1;
@@ -209,7 +211,7 @@ static int host_connect(lua_State *l) {
 
 	enet_uint32 data = 0;
 	size_t channel_count = 1;
-	
+
 	parse_address(l, luaL_checkstring(l, 2), &address);
 
 	switch (lua_gettop(l)) {
@@ -273,6 +275,25 @@ static int peer_disconnect(lua_State *l) {
 	return 0;
 }
 
+static int peer_reset(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+	enet_peer_reset(peer);
+	return 0;
+}
+
+static int peer_receive(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	enet_uint8 channel_id = 0;
+	if (lua_gettop(l) > 1) {
+		channel_id = luaL_checkint(l, 2);
+	}
+
+	ENetPacket *packet = enet_peer_receive(peer, channel_id);
+	if (packet == NULL) return 0;
+	return 0;
+}
+
 
 /**
  * Send a lua string to a peer
@@ -307,6 +328,8 @@ static const struct luaL_Reg enet_host_funcs [] = {
 
 static const struct luaL_Reg enet_peer_funcs [] = {
 	{"disconnect", peer_disconnect},
+	{"reset", peer_reset},
+	{"receive", peer_receive},
 	{"send", peer_send},
 	{NULL, NULL}
 };
