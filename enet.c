@@ -84,6 +84,43 @@ static void push_peer(lua_State *l, ENetPeer *peer) {
 	lua_remove(l, -2); // remove enet_peers
 }
 
+static void push_event(lua_State *l, ENetEvent *event) {
+	lua_newtable(l); // event table
+
+	if (event->peer) {
+		push_peer(l, event->peer);
+		lua_setfield(l, -2, "peer");
+	}
+
+	switch (event->type) {
+		case ENET_EVENT_TYPE_CONNECT:
+			lua_pushstring(l, "connect");
+			break;
+		case ENET_EVENT_TYPE_DISCONNECT:
+			lua_pushinteger(l, event->data);
+			lua_setfield(l, -2, "data");
+
+			lua_pushstring(l, "disconnect");
+			break;
+		case ENET_EVENT_TYPE_RECEIVE:
+			lua_pushlstring(l, (const char *)event->packet->data, event->packet->dataLength);
+			lua_setfield(l, -2, "data");
+
+			lua_pushinteger(l, event->channelID);
+			lua_setfield(l, -2, "channel");
+
+			lua_pushstring(l, "receive");
+
+			enet_packet_destroy(event->packet);
+			break;
+		case ENET_EVENT_TYPE_NONE:
+			lua_pushstring(l, "none");
+			break;
+	}
+
+	lua_setfield(l, -2, "type");
+}
+
 /**
  * Read a packet off the stack as a string
  * idx is position of string
@@ -188,36 +225,21 @@ static int host_service(lua_State *l) {
 	if (out == 0) return 0;
 	if (out < 0) return luaL_error(l, "Error during service");
 
-	// extract event and return it
-	lua_newtable(l);
+	push_event(l, &event);
+	return 1;
+}
 
-	push_peer(l, event.peer);
-	lua_setfield(l, -2, "peer");
+/**
+ * Dispatch a single event if available
+ */
+static int host_check_events(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+	ENetEvent event;
+	int out = enet_host_check_events(host, &event);
+	if (out == 0) return 0;
+	if (out < 0) return luaL_error(l, "Error checking event");
 
-	switch (event.type) {
-		case ENET_EVENT_TYPE_CONNECT:
-			lua_pushstring(l, "connect");
-			break;
-		case ENET_EVENT_TYPE_DISCONNECT:
-			lua_pushinteger(l, event.data);
-			lua_setfield(l, -2, "data");
-
-			lua_pushstring(l, "disconnect");
-			break;
-		case ENET_EVENT_TYPE_RECEIVE:
-			lua_pushlstring(l, (const char *)event.packet->data, event.packet->dataLength);
-			lua_setfield(l, -2, "data");
-
-			lua_pushinteger(l, event.channelID);
-			lua_setfield(l, -2, "channel");
-
-			lua_pushstring(l, "receive");
-
-			enet_packet_destroy(event.packet);
-			break;
-		case ENET_EVENT_TYPE_NONE: break;
-	}
-	lua_setfield(l, -2, "type");
+	push_event(l, &event);
 	return 1;
 }
 
@@ -379,6 +401,7 @@ static const struct luaL_Reg enet_funcs [] = {
 
 static const struct luaL_Reg enet_host_funcs [] = {
 	{"service", host_service},
+	{"check_events", host_check_events},
 	{"connect", host_connect},
 	{"broadcast", host_broadcast},
 	{"flush", host_flush},

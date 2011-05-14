@@ -135,6 +135,10 @@ which is one of `"connect"`, `"disconnect"`, `"receive"`. Events also have a
 A receive event also has a `data` entry which is a Lua string containing the
 data received.
 
+### `host:check_events()`
+Checks for any queued events and dispatches one if available. Returns the
+associated event if something was dispatched, otherwise `nil`.
+
 ### `host:flush()`
 Sends any queued packets. This is only required to send packets earlier than
 the next call to `host:service`, or if `host:service` will not be called again.
