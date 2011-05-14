@@ -131,15 +131,17 @@ static int host_create(lua_State *l) {
 
 	switch (lua_gettop(l)) {
 		case 5:
-			out_bandwidth = luaL_checkint(l, 5);
+			if (!lua_isnil(l, 5)) out_bandwidth = luaL_checkint(l, 5);
 		case 4:
-			in_bandwidth = luaL_checkint(l, 4);
+			if (!lua_isnil(l, 4)) in_bandwidth = luaL_checkint(l, 4);
 		case 3:
-			channel_count = luaL_checkint(l, 3);
+			if (!lua_isnil(l, 3)) channel_count = luaL_checkint(l, 3);
 		case 2:
-			peer_count = luaL_checkint(l, 2);
+			if (!lua_isnil(l, 2)) peer_count = luaL_checkint(l, 2);
 	}
 
+	printf("host create, peers=%d, channels=%d, in=%d, out=%d\n",
+			peer_count, channel_count, in_bandwidth, out_bandwidth);
 	ENetHost *host = enet_host_create(have_address ? &address : NULL, peer_count,
 			channel_count, in_bandwidth, out_bandwidth);
 
@@ -186,12 +188,21 @@ static int host_service(lua_State *l) {
 			lua_pushstring(l, "connect");
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
+			lua_pushinteger(l, event.data);
+			lua_setfield(l, -2, "data");
+
 			lua_pushstring(l, "disconnect");
 			break;
 		case ENET_EVENT_TYPE_RECEIVE:
 			lua_pushlstring(l, (const char *)event.packet->data, event.packet->dataLength);
 			lua_setfield(l, -2, "data");
+
+			lua_pushinteger(l, event.channelID);
+			lua_setfield(l, -2, "channel");
+
 			lua_pushstring(l, "receive");
+
+			enet_packet_destroy(event.packet);
 			break;
 		case ENET_EVENT_TYPE_NONE: break;
 	}
@@ -214,14 +225,18 @@ static int host_connect(lua_State *l) {
 	parse_address(l, luaL_checkstring(l, 2), &address);
 
 	switch (lua_gettop(l)) {
+		case 4:
+			if (!lua_isnil(l, 4)) data = luaL_checkint(l, 4);
+		case 3:
+			if (!lua_isnil(l, 3)) channel_count = luaL_checkint(l, 3);
 	}
 
+	printf("host connect, channels=%d, data=%d\n", channel_count, data);
 	ENetPeer *peer = enet_host_connect(host, &address, channel_count, data);
 
 	if (peer == NULL) {
 		return luaL_error(l, "Failed to create peer");
 	}
-
 
 	push_peer(l, peer);
 
@@ -262,15 +277,44 @@ static int peer_tostring(lua_State *l) {
 	return 1;
 }
 
+static int peer_ping(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+	enet_peer_ping(peer);
+	return 0;
+}
+
+static int peer_throttle_configure(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	enet_uint32 interval = luaL_checkint(l, 2);
+	enet_uint32 acceleration = luaL_checkint(l, 3);
+	enet_uint32 decceleration = luaL_checkint(l, 4);
+
+	enet_peer_throttle_configure(peer, interval, acceleration, decceleration);
+	return 0;
+}
+
 static int peer_disconnect(lua_State *l) {
 	ENetPeer *peer = check_peer(l, 1);
 
-	enet_uint32 data = 0;
-	if (lua_gettop(l) > 1) {
-		data = luaL_checkint(l, 2);
-	}
-
+	enet_uint32 data = lua_gettop(l) > 1 ? luaL_checkint(l, 2) : 0;
 	enet_peer_disconnect(peer, data);
+	return 0;
+}
+
+static int peer_disconnect_now(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	enet_uint32 data = lua_gettop(l) > 1 ? luaL_checkint(l, 2) : 0;
+	enet_peer_disconnect_now(peer, data);
+	return 0;
+}
+
+static int peer_disconnect_later(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	enet_uint32 data = lua_gettop(l) > 1 ? luaL_checkint(l, 2) : 0;
+	enet_peer_disconnect_later(peer, data);
 	return 0;
 }
 
@@ -288,9 +332,14 @@ static int peer_receive(lua_State *l) {
 		channel_id = luaL_checkint(l, 2);
 	}
 
-	ENetPacket *packet = enet_peer_receive(peer, channel_id);
+	ENetPacket *packet = enet_peer_receive(peer, &channel_id);
 	if (packet == NULL) return 0;
-	return 0;
+
+	lua_pushlstring(l, (const char *)packet->data, packet->dataLength);
+	lua_pushinteger(l, channel_id);
+
+	enet_packet_destroy(packet);
+	return 2;
 }
 
 
@@ -327,7 +376,10 @@ static const struct luaL_Reg enet_host_funcs [] = {
 
 static const struct luaL_Reg enet_peer_funcs [] = {
 	{"disconnect", peer_disconnect},
+	{"disconnect_now", peer_disconnect_now},
+	{"disconnect_later", peer_disconnect_later},
 	{"reset", peer_reset},
+	{"ping", peer_ping},
 	{"receive", peer_receive},
 	{"send", peer_send},
 	{NULL, NULL}

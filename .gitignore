@@ -1,2 +1,3 @@
-enet.so
+*.so
+*.o
 /*.lua
