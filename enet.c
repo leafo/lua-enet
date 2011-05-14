@@ -96,9 +96,20 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 	*channel_id = 0;
 
 	int argc = lua_gettop(l);
-	if (argc >= idx+2) { /* flags */ }
-	if (argc >= idx+1) {
-		*channel_id = luaL_checkint(l, 3);
+	if (argc >= idx+2 && !lua_isnil(l, idx+2)) {
+		const char *flag_str = luaL_checkstring(l, idx+2);
+		if (strcmp("unsequenced", flag_str) == 0) {
+			flags = ENET_PACKET_FLAG_RELIABLE;
+		} else if (strcmp("reliable", flag_str) == 0) {
+			flags = ENET_PACKET_FLAG_RELIABLE;
+		} else if (strcmp("unreliable", flag_str) == 0) {
+			flags = 0;
+		} else {
+			luaL_error(l, "Unknown packet flag: %s", flag_str);
+		}
+	}
+	if (argc >= idx+1 && lua_isnil(l, idx+1)) {
+		*channel_id = luaL_checkint(l, idx+1);
 	}
 
 	ENetPacket *packet = enet_packet_create(data, size, flags);

@@ -139,6 +139,17 @@ data received.
 Sends any queued packets. This is only required to send packets earlier than
 the next call to `host:service`, or if `host:service` will not be called again.
 
+### `peer:send(data [, channel, flag])`
+Queues  a packet to be sent to dir. `data` is the contents of the packet, it
+must be a Lua string.
+
+`channel` is the channel to send the packet on. Defaults to `0`.
+
+`flag` is one of `"reliable"`, `"unsequenced"`, or `"unreliable"`. Reliable
+packets are guaranteed to arrive, and arrive in the order in which they are sent.
+Unsequenced packets are unreliable and have no guarantee on the order they
+arrive. Defaults to reliable.
+
 ### `peer:disconnect([data])`
 Requests a disconnection from the peer. The message is sent on next
 `host:service` or `host:flush`.
