@@ -112,7 +112,6 @@ Parameters:
 
 ### `host:connect(address [, channels_count, data])`
 Connects a host to a remote host. Returns peer object associated with remote host.
-
 The actual connection will not take place until the next `host:service` done,
 in which a `"connect"` event will be generated.
 
@@ -125,7 +124,6 @@ Defaults to `0`.
 ### `host:service([timeout])`
 Wait for events, send and receive any ready packets. `timeout` is the max
 number of milliseconds to be wait for an event. By default `timeout` is `0`.
-
 Returns `nil` on timeout if not events occurred.
 
 If an event happens an event table is returned. All events have a `type` entry,
@@ -142,6 +140,13 @@ associated event if something was dispatched, otherwise `nil`.
 ### `host:flush()`
 Sends any queued packets. This is only required to send packets earlier than
 the next call to `host:service`, or if `host:service` will not be called again.
+
+### `host:channel_limit(limit)`
+Sets the maximum number of channels allowed. If it is `0` then the system
+maximum allowable value is used.
+
+### `host:bandwidth_limit(incoming, outgoing)`
+Sets the bandwidth limits of the host in bytes/sec. Set to `0` for unlimited.
 
 ### `peer:send(data [, channel, flag])`
 Queues  a packet to be sent to dir. `data` is the contents of the packet, it
@@ -192,10 +197,13 @@ Parameters:
 
 ### `peer:receive()`
 Attempts to dequeue an incoming packet for this peer.
-
 Returns `nil` if there are no packets waiting. Otherwise returns two values:
 the string representing the packet data, and the channel the packet came from.
 
 <a name="contact"></a>
 ## Contact
+
+Author: Leaf Corcoran (leafo)  
+Email: <leafot@gmail.com>  
+Homepage: <http://leafo.net>  
 

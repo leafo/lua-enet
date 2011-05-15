@@ -145,7 +145,7 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 			luaL_error(l, "Unknown packet flag: %s", flag_str);
 		}
 	}
-	if (argc >= idx+1 && lua_isnil(l, idx+1)) {
+	if (argc >= idx+1 && !lua_isnil(l, idx+1)) {
 		*channel_id = luaL_checkint(l, idx+1);
 	}
 
@@ -156,8 +156,6 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 
 	return packet;
 }
-
-
 
 /**
  * Create a new host
@@ -287,8 +285,23 @@ static int host_broadcast(lua_State *l) {
 
 	enet_uint8 channel_id;
 	ENetPacket *packet = read_packet(l, 2, &channel_id);
-
 	enet_host_broadcast(host, channel_id, packet);
+	return 0;
+}
+
+// Args: limit:number
+static int host_channel_limit(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+	int limit = luaL_checkint(l, 2);
+	enet_host_channel_limit(host, limit);
+	return 0;
+}
+
+static int host_bandwidth_limit(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+	enet_uint32 in_bandwidth = luaL_checkint(l, 2);
+	enet_uint32 out_bandwidth = luaL_checkint(l, 2);
+	enet_host_bandwidth_limit(host, in_bandwidth, out_bandwidth);
 	return 0;
 }
 
@@ -390,6 +403,7 @@ static int peer_send(lua_State *l) {
 	enet_uint8 channel_id;
 	ENetPacket *packet = read_packet(l, 2, &channel_id);
 
+	printf("sending, channel_id=%d\n", channel_id);
 	enet_peer_send(peer, channel_id, packet);
 	return 0;
 }
@@ -405,6 +419,8 @@ static const struct luaL_Reg enet_host_funcs [] = {
 	{"connect", host_connect},
 	{"broadcast", host_broadcast},
 	{"flush", host_flush},
+	{"channel_limit", host_channel_limit},
+	{"bandwidth_limit", host_bandwidth_limit},
 	{NULL, NULL}
 };
 
@@ -416,6 +432,7 @@ static const struct luaL_Reg enet_peer_funcs [] = {
 	{"ping", peer_ping},
 	{"receive", peer_receive},
 	{"send", peer_send},
+	{"throttle_configure", peer_throttle_configure},
 	{NULL, NULL}
 };
 
