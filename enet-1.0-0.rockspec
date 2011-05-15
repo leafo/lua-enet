@@ -8,7 +8,7 @@ description = {
 	detailed = [[
 		Binding to ENet, network communication layer on top of UDP.
 	]],
-	homepage = "http://leafo.net/enet-lua",
+	homepage = "http://leafo.net/lua-enet",
 	license = "MIT"
 }
 dependencies = {
