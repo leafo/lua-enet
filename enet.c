@@ -69,7 +69,7 @@ static void push_peer(lua_State *l, ENetPeer *peer) {
 	lua_gettable(l, -2);
 
 	if (lua_isnil(l, -1)) {
-		printf("creating new peer\n");
+		// printf("creating new peer\n");
 		lua_pop(l, 1);
 
 		*(ENetPeer**)lua_newuserdata(l, sizeof(void*)) = peer;
@@ -186,8 +186,8 @@ static int host_create(lua_State *l) {
 			if (!lua_isnil(l, 2)) peer_count = luaL_checkint(l, 2);
 	}
 
-	printf("host create, peers=%d, channels=%d, in=%d, out=%d\n",
-			peer_count, channel_count, in_bandwidth, out_bandwidth);
+	// printf("host create, peers=%d, channels=%d, in=%d, out=%d\n",
+	// 		peer_count, channel_count, in_bandwidth, out_bandwidth);
 	ENetHost *host = enet_host_create(have_address ? &address : NULL, peer_count,
 			channel_count, in_bandwidth, out_bandwidth);
 
@@ -262,7 +262,7 @@ static int host_connect(lua_State *l) {
 			if (!lua_isnil(l, 3)) channel_count = luaL_checkint(l, 3);
 	}
 
-	printf("host connect, channels=%d, data=%d\n", channel_count, data);
+	// printf("host connect, channels=%d, data=%d\n", channel_count, data);
 	ENetPeer *peer = enet_host_connect(host, &address, channel_count, data);
 
 	if (peer == NULL) {
@@ -403,7 +403,7 @@ static int peer_send(lua_State *l) {
 	enet_uint8 channel_id;
 	ENetPacket *packet = read_packet(l, 2, &channel_id);
 
-	printf("sending, channel_id=%d\n", channel_id);
+	// printf("sending, channel_id=%d\n", channel_id);
 	enet_peer_send(peer, channel_id, packet);
 	return 0;
 }
@@ -471,7 +471,6 @@ LUALIB_API int luaopen_enet(lua_State *l) {
 	lua_setfield(l, LUA_REGISTRYINDEX, "enet_peers");
 
 	luaL_register(l, "enet", enet_funcs);
-	printf("loaded enet\n");
 	return 0;
 }
 

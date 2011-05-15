@@ -7,7 +7,7 @@ while true do
 	if event and event.type == "connect" then
 		event.peer:send("hello world")
 		for i = 0, 100 do
-			event.peer:send(tostring(i), 1, "something else")
+			event.peer:send(tostring(i), 1, "unreliable")
 		end
 	end
 end
