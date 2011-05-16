@@ -94,6 +94,9 @@ static void push_event(lua_State *l, ENetEvent *event) {
 
 	switch (event->type) {
 		case ENET_EVENT_TYPE_CONNECT:
+			lua_pushinteger(l, event->data);
+			lua_setfield(l, -2, "data");
+
 			lua_pushstring(l, "connect");
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
@@ -334,9 +337,9 @@ static int peer_throttle_configure(lua_State *l) {
 
 	enet_uint32 interval = luaL_checkint(l, 2);
 	enet_uint32 acceleration = luaL_checkint(l, 3);
-	enet_uint32 decceleration = luaL_checkint(l, 4);
+	enet_uint32 deceleration = luaL_checkint(l, 4);
 
-	enet_peer_throttle_configure(peer, interval, acceleration, decceleration);
+	enet_peer_throttle_configure(peer, interval, acceleration, deceleration);
 	return 0;
 }
 
