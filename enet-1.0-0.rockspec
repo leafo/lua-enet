@@ -1,7 +1,7 @@
 package = "enet"
 version = "1.0-0"
 source = {
-	url = "http://leafo.net/"
+	url = "git://github.com/leafo/lua-enet.git"
 }
 description = {
 	summary = "A library for doing network communication in Lua",
