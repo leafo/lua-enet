@@ -130,12 +130,13 @@ static void push_event(lua_State *l, ENetEvent *event) {
  */
 static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 	size_t size;
+	int argc = lua_gettop(l);
 	const void *data = luaL_checklstring(l, idx, &size);
+	ENetPacket *packet;
 
 	enet_uint32 flags = ENET_PACKET_FLAG_RELIABLE;
 	*channel_id = 0;
 
-	int argc = lua_gettop(l);
 	if (argc >= idx+2 && !lua_isnil(l, idx+2)) {
 		const char *flag_str = luaL_checkstring(l, idx+2);
 		if (strcmp("unsequenced", flag_str) == 0) {
@@ -152,7 +153,7 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 		*channel_id = luaL_checkint(l, idx+1);
 	}
 
-	ENetPacket *packet = enet_packet_create(data, size, flags);
+	packet = enet_packet_create(data, size, flags);
 	if (packet == NULL) {
 		luaL_error(l, "Failed to create packet");
 	}
@@ -166,6 +167,7 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
  * 	address (nil for client)
  */
 static int host_create(lua_State *l) {
+	ENetHost *host;
 	size_t peer_count = 64, channel_count = 1;
 	enet_uint32 in_bandwidth = 0, out_bandwidth = 0;
 
@@ -191,7 +193,7 @@ static int host_create(lua_State *l) {
 
 	// printf("host create, peers=%d, channels=%d, in=%d, out=%d\n",
 	// 		peer_count, channel_count, in_bandwidth, out_bandwidth);
-	ENetHost *host = enet_host_create(have_address ? &address : NULL, peer_count,
+	host = enet_host_create(have_address ? &address : NULL, peer_count,
 			channel_count, in_bandwidth, out_bandwidth);
 
 	if (host == NULL) {
@@ -216,13 +218,13 @@ static int host_create(lua_State *l) {
  */
 static int host_service(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
-	int timeout = 0;
+	ENetEvent event;
+	int timeout = 0, out;
 
 	if (lua_gettop(l) > 1)
 		timeout = luaL_checkint(l, 2);
 
-	ENetEvent event;
-	int out = enet_host_service(host, &event, timeout);
+	out = enet_host_service(host, &event, timeout);
 	if (out == 0) return 0;
 	if (out < 0) return luaL_error(l, "Error during service");
 
@@ -252,6 +254,7 @@ static int host_check_events(lua_State *l) {
 static int host_connect(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
 	ENetAddress address;
+	ENetPeer *peer;
 
 	enet_uint32 data = 0;
 	size_t channel_count = 1;
@@ -266,7 +269,7 @@ static int host_connect(lua_State *l) {
 	}
 
 	// printf("host connect, channels=%d, data=%d\n", channel_count, data);
-	ENetPeer *peer = enet_host_connect(host, &address, channel_count, data);
+	peer = enet_host_connect(host, &address, channel_count, data);
 
 	if (peer == NULL) {
 		return luaL_error(l, "Failed to create peer");
@@ -375,13 +378,14 @@ static int peer_reset(lua_State *l) {
 
 static int peer_receive(lua_State *l) {
 	ENetPeer *peer = check_peer(l, 1);
-
+	ENetPacket *packet;
 	enet_uint8 channel_id = 0;
+
 	if (lua_gettop(l) > 1) {
 		channel_id = luaL_checkint(l, 2);
 	}
 
-	ENetPacket *packet = enet_peer_receive(peer, &channel_id);
+	packet = enet_peer_receive(peer, &channel_id);
 	if (packet == NULL) return 0;
 
 	lua_pushlstring(l, (const char *)packet->data, packet->dataLength);
