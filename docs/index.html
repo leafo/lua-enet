@@ -119,6 +119,9 @@ pre {
 
 	<div id="main">
 		<div id="head">
+			<div class="social">
+<iframe src="http://platform.twitter.com/widgets/tweet_button.html#_=1315116229915&amp;count=horizontal&amp;id=twitter_tweet_button_0&amp;lang=en&amp;original_referer=file%3A%2F%2F%2Fsrv%2Fwww%2Flua-enet%2Fwww%2Findex.html&amp;text=lua-enet%2C%20Lua%20bindings%20for%20ENet&amp;url=http%3A%2F%2Fleafo.net%2Flua-enet&amp;via=moonscript" allowtransparency="true" frameborder="0" scrolling="no" class="twitter-share-button twitter-count-horizontal" style="width: 110px; height: 20px; " title="Twitter For Websites: Tweet Button"></iframe>
+			</div>
 			<h1>lua-enet</h1>
 		</div>
 		<div class="inner"><p><strong>lua-enet</strong> is a binding to the <a href="http://enet.bespin.org/">ENet</a> library for
@@ -152,6 +155,8 @@ original documentation.</p>
 			<li><a href="#hostcheck_events"><code>host:check_events()</code></a></li>
 		
 			<li><a href="#hostflush"><code>host:flush()</code></a></li>
+		
+			<li><a href="#hostbroadcastdata__channel_flag"><code>host:broadcast(data [, channel, flag])</code></a></li>
 		
 			<li><a href="#hostchannel_limitlimit"><code>host:channel_limit(limit)</code></a></li>
 		
@@ -331,6 +336,11 @@ associated event if something was dispatched, otherwise <code>nil</code>.</p>
 <p>Sends any queued packets. This is only required to send packets earlier than
 the next call to <code>host:service</code>, or if <code>host:service</code> will not be called again.</p>
 
+<h3><a name="hostbroadcastdata__channel_flag"></a><code>host:broadcast(data [, channel, flag])</code></h3>
+
+<p>Queues a packet to be sent to all connected peers. See
+<a href="#peersenddata__channel_flag">peer:send</a> for arguments.</p>
+
 <h3><a name="hostchannel_limitlimit"></a><code>host:channel_limit(limit)</code></h3>
 
 <p>Sets the maximum number of channels allowed. If it is <code>0</code> then the system
@@ -438,7 +448,7 @@ Email: <a href="mailto:leafot@gmail.com">leafot@gmail.com</a><br>
 Homepage: <a href="http://leafo.net">http://leafo.net</a><br>
 </p>
 </div>
-		<div class="footer">Generated on Sat Sep  3 13:49:50 2011</div>
+		<div class="footer">Generated on Sat Sep  3 23:00:34 2011</div>
 	</div>
 
 	

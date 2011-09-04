@@ -146,6 +146,10 @@ associated event if something was dispatched, otherwise `nil`.
 Sends any queued packets. This is only required to send packets earlier than
 the next call to `host:service`, or if `host:service` will not be called again.
 
+### `host:broadcast(data [, channel, flag])`
+Queues a packet to be sent to all connected peers. See
+[peer:send](#peersenddata__channel_flag) for arguments.
+
 ### `host:channel_limit(limit)`
 Sets the maximum number of channels allowed. If it is `0` then the system
 maximum allowable value is used.
