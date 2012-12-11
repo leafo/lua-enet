@@ -1,3 +1,25 @@
+/**
+ *
+ * Copyright (C) 2011 by Leaf Corcoran
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -197,7 +219,9 @@ static int host_create(lua_State *l) {
 			channel_count, in_bandwidth, out_bandwidth);
 
 	if (host == NULL) {
-		return luaL_error(l, "Failed to create host");
+		lua_pushnil (l);
+		lua_pushstring(l, "enet: failed to create host (already listening?)");
+		return 2;
 	}
 
 	*(ENetHost**)lua_newuserdata(l, sizeof(void*)) = host;
@@ -311,6 +335,79 @@ static int host_bandwidth_limit(lua_State *l) {
 	return 0;
 }
 
+static int host_total_sent_data(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+
+	lua_pushinteger (l, host->totalSentData);
+
+	return 1;
+}
+
+static int host_total_received_data(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+
+	lua_pushinteger (l, host->totalReceivedData);
+
+	return 1;
+}
+static int host_service_time(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+
+	lua_pushinteger (l, host->serviceTime);
+
+	return 1;
+}
+
+static int host_peer_count(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+
+	lua_pushinteger (l, host->peerCount);
+
+	return 1;
+}
+
+static int host_connected_peer_count(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+	unsigned int connected_peer_count = 0;
+
+	ENetPeer *peer;
+	for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
+		if (peer->state != ENET_PEER_STATE_CONNECTED 
+				&& peer->state != ENET_PEER_STATE_DISCONNECT_LATER)
+			continue;
+
+		connected_peer_count++;
+	}
+
+	lua_pushinteger (l, connected_peer_count);
+
+	return 1;
+}
+
+static int host_get_peer(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+
+	unsigned int peer_index = luaL_checkint(l, 2) - 1;
+	ENetPeer *peer;
+
+	for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
+		if (peer->state != ENET_PEER_STATE_CONNECTED 
+				&& peer->state != ENET_PEER_STATE_DISCONNECT_LATER)
+			continue;
+
+		if (peer_index == 0)
+			break;
+
+		peer_index --;
+	}
+
+	if (peer_index > 0)
+		return 0;
+
+	push_peer (l, peer);
+	return 1;
+}
+
 static int host_gc(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
 	enet_host_destroy(host);
@@ -344,6 +441,69 @@ static int peer_throttle_configure(lua_State *l) {
 
 	enet_peer_throttle_configure(peer, interval, acceleration, deceleration);
 	return 0;
+}
+
+static int peer_round_trip_time(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	if (lua_gettop(l) > 1) {
+		enet_uint32 round_trip_time = luaL_checkint(l, 2);
+		peer->roundTripTime = round_trip_time;
+	}
+
+	lua_pushinteger (l, peer->roundTripTime);
+
+	return 1;
+}
+
+static int peer_last_round_trip_time(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	if (lua_gettop(l) > 1) {
+		enet_uint32 round_trip_time = luaL_checkint(l, 2);
+		peer->lastRoundTripTime = round_trip_time;
+	}
+	lua_pushinteger (l, peer->lastRoundTripTime);
+
+	return 1;
+}
+
+static int peer_ping_interval(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	if (lua_gettop(l) > 1) {
+		enet_uint32 interval = luaL_checkint(l, 2);
+		enet_peer_ping_interval (peer, interval);
+	}
+
+	lua_pushinteger (l, peer->pingInterval);
+
+	return 1;
+}
+
+static int peer_timeout(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	enet_uint32 timeout_limit = 0;
+	enet_uint32 timeout_minimum = 0;
+	enet_uint32 timeout_maximum = 0;
+
+	switch (lua_gettop(l)) {
+		case 4:
+			if (!lua_isnil(l, 4)) timeout_maximum = luaL_checkint(l, 4);
+		case 3:
+			if (!lua_isnil(l, 3)) timeout_minimum = luaL_checkint(l, 3);
+		case 2:
+			if (!lua_isnil(l, 2)) timeout_limit = luaL_checkint(l, 2);
+	}
+
+	enet_peer_timeout (peer, timeout_limit, timeout_minimum, timeout_maximum);
+
+	lua_pushinteger (l, peer->timeoutLimit);
+	lua_pushinteger (l, peer->timeoutMinimum);
+	lua_pushinteger (l, peer->timeoutMaximum);
+
+	return 3;
 }
 
 static int peer_disconnect(lua_State *l) {
@@ -428,6 +588,12 @@ static const struct luaL_Reg enet_host_funcs [] = {
 	{"flush", host_flush},
 	{"channel_limit", host_channel_limit},
 	{"bandwidth_limit", host_bandwidth_limit},
+	{"total_sent_data", host_total_sent_data},
+	{"total_received_data", host_total_received_data},
+	{"service_time", host_service_time},
+	{"peer_count", host_peer_count},
+	{"connected_peer_count", host_connected_peer_count},
+	{"get_peer", host_get_peer},
 	{NULL, NULL}
 };
 
@@ -440,6 +606,10 @@ static const struct luaL_Reg enet_peer_funcs [] = {
 	{"receive", peer_receive},
 	{"send", peer_send},
 	{"throttle_configure", peer_throttle_configure},
+	{"round_trip_time", peer_round_trip_time},
+	{"last_round_trip_time", peer_last_round_trip_time},
+	{"ping_interval", peer_ping_interval},
+	{"timeout", peer_timeout},
 	{NULL, NULL}
 };
 
