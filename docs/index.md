@@ -157,6 +157,31 @@ maximum allowable value is used.
 ### `host:bandwidth_limit(incoming, outgoing)`
 Sets the bandwidth limits of the host in bytes/sec. Set to `0` for unlimited.
 
+### `host:total_sent_data()`
+Returns the number of bytes that were sent through the given host.
+
+### `host:total_received_data()`
+Returns the number of bytes that were received by the given host. 
+
+### `host:peer_count()`
+Returns the number of peers that are allocated for the given host. This
+represents the maximum number of possible connections.
+
+### `host:connected_peer_count()`
+Returns the number of connected (i.e. active) peers.
+
+### `host:get_peer(index)`
+Returns the connected peer at the specified index (starting at 1). Please
+note that it is not guaranteed that the index stays the same for a single
+peer over time as enet pre-allocates memory in an array for all peers and
+sets their state to `connected` when a connection is established.
+
+For peers with closed connections the internal state is set to
+`disconnected`. The function `host:get_peer(i)` loops over all connections
+and returns the i-th connection that is active. If a peer with index j and
+j < i is disconnected all peers with index i and i > j have now index i -
+1.
+
 ### `peer:send(data [, channel, flag])`
 Queues a packet to be sent to peer. `data` is the contents of the packet, it
 must be a Lua string.
@@ -208,6 +233,41 @@ Parameters:
 Attempts to dequeue an incoming packet for this peer.
 Returns `nil` if there are no packets waiting. Otherwise returns two values:
 the string representing the packet data, and the channel the packet came from.
+
+### `peer:round_trip_time(value)`
+Returns or sets the current round trip time (i.e. ping). If value is nil
+the current value of the peer is returned. Otherwise the value roundTripTime
+is set to the specified value and returned.
+
+Enet performs some filtering on
+the round trip times and it takes some time until the parameters are
+accurate.
+
+### `peer:round_trip_time(value)`
+Returns or sets the round trip time of the previous round trip time
+computation. If value is nil the current value of the peer is returned.
+Otherwise the value lastRoundTripTime is set to the specified value and
+returned. 
+
+Enet performs some filtering on the round trip times and it takes
+some time until the parameters are accurate.
+
+### `limit, minimum, maximum peer:timeout(limit, minimum, maximum)`
+Returns or sets the parameters when a timeout is detected. This is happens
+either after a fixed timeout or a variable timeout of time that takes the
+round trip time into account. The former is specified with the `maximum`
+parameter.
+
+Parameters:
+
+  * `limit` a factor that is multiplied with a value that based on the 
+	average round trip time to compute the timeout limit
+  * `minimum` timeout value in milliseconds that a reliable packet has to
+	be acknowledged if the variable timeout limit was exceeded
+  * `maximum` fixed timeout in milliseconds for which any packet has to be acknowledged
+
+See official enet documentation for detailed description.
+
 </div>
 
 <a name="license"></a>
