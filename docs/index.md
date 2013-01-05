@@ -93,8 +93,6 @@ When a client disconnects, make sure to call `disconnect` on the server object,
 and then tell the host to flush (unless `host:service` will be called again)
 otherwise the server will have to wait for the client to disconnect from timeout.
 
-<a name="reference"></a>
-<div class="api">
 ## Reference
 
 ### `enet.host_create([bind_address, peer_count, channel_count, in_bandwidth, out_bandwidth])`
