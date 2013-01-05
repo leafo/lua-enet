@@ -8,6 +8,8 @@ To get an idea of how ENet works and what it provides have a look at
 [Features and Achritecture](http://enet.bespin.org/Features.html) from the
 original documentation.
 
+[TOC]
+
 <a name="install"></a>
 ## Download & Install
 
@@ -142,6 +144,10 @@ data received.
 Checks for any queued events and dispatches one if available. Returns the
 associated event if something was dispatched, otherwise `nil`.
 
+### `host:compress_with_range_coder()`
+Enables an adaptive order-2 PPM range coder for the transmitted data of
+all pers.
+
 ### `host:flush()`
 Sends any queued packets. This is only required to send packets earlier than
 the next call to `host:service`, or if `host:service` will not be called again.
@@ -167,31 +173,15 @@ Returns the number of bytes that were received by the given host.
 Returns the number of peers that are allocated for the given host. This
 represents the maximum number of possible connections.
 
-### `host:connected_peer_count()`
-Returns the number of connected (i.e. active) peers.
-
 ### `host:get_peer(index)`
-Returns the connected peer at the specified index (starting at 1). Please
-note that it is not guaranteed that the index stays the same for a single
-peer over time as enet pre-allocates memory in an array for all peers and
-sets their state to `connected` when a connection is established.
+Returns the connected peer at the specified index (starting at 1). ENet
+stores all peers in an array of the corresponding host and re-uses unused
+peers for new connections. You can query the state of a peer using 
+[peer:state](#peerstate).
 
-For peers with closed connections the internal state is set to
-`disconnected`. The function `host:get_peer(i)` loops over all connections
-and returns the i-th connection that is active. If a peer with index j and
-j < i is disconnected all peers with index i and i > j have now index i -
-1.
-
-### `peer:send(data [, channel, flag])`
-Queues a packet to be sent to peer. `data` is the contents of the packet, it
-must be a Lua string.
-
-`channel` is the channel to send the packet on. Defaults to `0`.
-
-`flag` is one of `"reliable"`, `"unsequenced"`, or `"unreliable"`. Reliable
-packets are guaranteed to arrive, and arrive in the order in which they are sent.
-Unsequenced packets are unreliable and have no guarantee on the order they
-arrive. Defaults to reliable.
+### `peer:connect_id()`
+Returns the field ENetPeer::connectID that is assigned for each
+connection.
 
 ### `peer:disconnect([data])`
 Requests a disconnection from the peer. The message is sent on the next
@@ -211,12 +201,65 @@ are sent.
 
 `data` is optional integer value to be associated with the disconnect.
 
-### `peer:reset()`
-Forcefully disconnects peer. The peer is not notified of the disconnection.
+### `peer:index()`
+Returns the index of the peer. All peers of an ENet host are kept in an
+array. This function finds and returns the index of the peer of its host
+structure.
 
 ### `peer:ping()`
 Send a ping request to peer, updates `round_trip_time`. This is called
 automatically at regular intervals.
+
+### `peer:ping_interval(interval)`
+Specifies the interval in milliseconds that pings are sent to the other
+end of the connection (defaults to 500).
+
+### `peer:reset()`
+Forcefully disconnects peer. The peer is not notified of the disconnection.
+
+### `peer:send(data [, channel, flag])`
+Queues a packet to be sent to peer. `data` is the contents of the packet, it
+must be a Lua string.
+
+`channel` is the channel to send the packet on. Defaults to `0`.
+
+<a name="peersenddata__channel_flag"></a>
+`flag` is one of `"reliable"`, `"unsequenced"`, or `"unreliable"`. Reliable
+packets are guaranteed to arrive, and arrive in the order in which they are sent.
+Unsequenced packets are unreliable and have no guarantee on the order they
+arrive. Defaults to reliable.
+
+<a name="peerstate"></a>
+### `peer:state()`
+Returns the state of the peer as a string. This can be any of the
+following:
+
+ * "disconnected"
+ * "connecting"
+ * "acknowledging_connect"
+ * "connection_pending"
+ * "connection_succeeded"
+ * "connected"
+ * "disconnect_later"
+ * "disconnecting"
+ * "acknowledging_disconnect"
+ * "zombie"
+ * "unknown"
+
+### `peer:receive()`
+Attempts to dequeue an incoming packet for this peer.
+Returns `nil` if there are no packets waiting. Otherwise returns two values:
+the string representing the packet data, and the channel the packet came from.
+
+### `peer:round_trip_time([value])`
+Returns or sets the round trip time of the previous round trip time
+computation. If value is nil the current value of the peer is returned.
+Otherwise the value lastRoundTripTime is set to the specified value and
+returned. 
+
+Enet performs some filtering on the round trip times and it takes
+some time until the parameters are accurate. To speed it up you can set
+the value of the round trip time to a more accurate guess.
 
 ### `peer:throttle_configure(interval, acceleration, deceleration)`
 Changes the probability at which unreliable packets should not be dropped.
@@ -229,30 +272,7 @@ Parameters:
  * `deceleration` rate at which to decrease throttle probability as mean RTT
    increases
 
-### `peer:receive()`
-Attempts to dequeue an incoming packet for this peer.
-Returns `nil` if there are no packets waiting. Otherwise returns two values:
-the string representing the packet data, and the channel the packet came from.
-
-### `peer:round_trip_time(value)`
-Returns or sets the current round trip time (i.e. ping). If value is nil
-the current value of the peer is returned. Otherwise the value roundTripTime
-is set to the specified value and returned.
-
-Enet performs some filtering on
-the round trip times and it takes some time until the parameters are
-accurate.
-
-### `peer:round_trip_time(value)`
-Returns or sets the round trip time of the previous round trip time
-computation. If value is nil the current value of the peer is returned.
-Otherwise the value lastRoundTripTime is set to the specified value and
-returned. 
-
-Enet performs some filtering on the round trip times and it takes
-some time until the parameters are accurate.
-
-### `limit, minimum, maximum peer:timeout(limit, minimum, maximum)`
+### `(limit, minimum, maximum) peer:timeout(limit, minimum, maximum)`
 Returns or sets the parameters when a timeout is detected. This is happens
 either after a fixed timeout or a variable timeout of time that takes the
 round trip time into account. The former is specified with the `maximum`
