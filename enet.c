@@ -84,6 +84,21 @@ static void parse_address(lua_State *l, const char *addr_str, ENetAddress *addre
 	}
 }
 
+/**
+ * Find the index of a given peer for which we only have the pointer.
+ */
+size_t find_peer_index (lua_State *l, ENetHost *enet_host, ENetPeer *peer) {
+	size_t peer_index;
+	for (peer_index = 0; peer_index < enet_host->peerCount; peer_index++) {
+		if (peer == &(enet_host->peers[peer_index]))
+			return peer_index;
+	}
+
+	luaL_error (l, "enet: could not find peer id!");
+
+	return peer_index;
+}
+
 static void push_peer(lua_State *l, ENetPeer *peer) {
 	// try to find in peer table
 	lua_getfield(l, LUA_REGISTRYINDEX, "enet_peers");
@@ -187,6 +202,10 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
  * Create a new host
  * Args:
  * 	address (nil for client)
+ * 	[peer_count = 64]
+ * 	[channel_count = 1]
+ * 	[in_bandwidth = 0]
+ * 	[out_bandwidth = 0]
  */
 static int host_create(lua_State *l) {
 	ENetHost *host;
@@ -271,9 +290,28 @@ static int host_check_events(lua_State *l) {
 }
 
 /**
+ * Enables an adaptive order-2 PPM range coder for the transmitted data of
+ * all peers.
+ */
+static int host_compress_with_range_coder(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+
+	int result = enet_host_compress_with_range_coder (host);
+	if (result == 0) {
+		lua_pushboolean (l, 1);
+	} else {
+		lua_pushboolean (l, 0);
+	}
+
+	return 1;
+}
+
+/**
  * Connect a host to an address
  * Args:
  * 	the address
+ * 	[channel_count = 1]
+ * 	[data = 0]
  */
 static int host_connect(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
@@ -366,43 +404,16 @@ static int host_peer_count(lua_State *l) {
 	return 1;
 }
 
-static int host_connected_peer_count(lua_State *l) {
-	ENetHost *host = check_host(l, 1);
-	unsigned int connected_peer_count = 0;
-
-	ENetPeer *peer;
-	for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
-		if (peer->state != ENET_PEER_STATE_CONNECTED 
-				&& peer->state != ENET_PEER_STATE_DISCONNECT_LATER)
-			continue;
-
-		connected_peer_count++;
-	}
-
-	lua_pushinteger (l, connected_peer_count);
-
-	return 1;
-}
-
 static int host_get_peer(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
 
-	unsigned int peer_index = luaL_checkint(l, 2) - 1;
-	ENetPeer *peer;
+	int peer_index = luaL_checkint(l, 2) - 1;
 
-	for (peer = host->peers; peer < &host->peers[host->peerCount]; ++peer) {
-		if (peer->state != ENET_PEER_STATE_CONNECTED 
-				&& peer->state != ENET_PEER_STATE_DISCONNECT_LATER)
-			continue;
-
-		if (peer_index == 0)
-			break;
-
-		peer_index --;
+	if (peer_index < 0 || peer_index >= host->peerCount) {
+		luaL_argerror (l, 2, "Invalid peer index");
 	}
 
-	if (peer_index > 0)
-		return 0;
+	ENetPeer *peer = &(host->peers[peer_index]);
 
 	push_peer (l, peer);
 	return 1;
@@ -530,6 +541,65 @@ static int peer_disconnect_later(lua_State *l) {
 	return 0;
 }
 
+static int peer_index(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	size_t peer_index = find_peer_index (l, peer->host, peer);
+	lua_pushinteger (l, peer_index + 1);
+
+	return 1;
+}
+
+static int peer_state(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	switch (peer->state) {
+		case (ENET_PEER_STATE_DISCONNECTED):
+			lua_pushstring (l, "disconnected");
+			break;
+		case (ENET_PEER_STATE_CONNECTING):
+			lua_pushstring (l, "connecting");
+			break;
+		case (ENET_PEER_STATE_ACKNOWLEDGING_CONNECT):
+			lua_pushstring (l, "acknowledging_connect");
+			break;
+		case (ENET_PEER_STATE_CONNECTION_PENDING):
+			lua_pushstring (l, "connection_pending");
+			break;
+		case (ENET_PEER_STATE_CONNECTION_SUCCEEDED):
+			lua_pushstring (l, "connection_succeeded");
+			break;
+		case (ENET_PEER_STATE_CONNECTED):
+			lua_pushstring (l, "connected");
+			break;
+		case (ENET_PEER_STATE_DISCONNECT_LATER):
+			lua_pushstring (l, "disconnect_later");
+			break;
+		case (ENET_PEER_STATE_DISCONNECTING):
+			lua_pushstring (l, "disconnecting");
+			break;
+		case (ENET_PEER_STATE_ACKNOWLEDGING_DISCONNECT):
+			lua_pushstring (l, "acknowledging_disconnect");
+			break;
+		case (ENET_PEER_STATE_ZOMBIE):
+			lua_pushstring (l, "zombie");
+			break;
+		default:
+			lua_pushstring (l, "unknown");
+	}
+
+	return 1;
+}
+
+static int peer_connect_id(lua_State *l) {
+	ENetPeer *peer = check_peer(l, 1);
+
+	lua_pushinteger (l, peer->connectID);
+
+	return 1;
+}
+
+
 static int peer_reset(lua_State *l) {
 	ENetPeer *peer = check_peer(l, 1);
 	enet_peer_reset(peer);
@@ -583,16 +653,18 @@ static const struct luaL_Reg enet_funcs [] = {
 static const struct luaL_Reg enet_host_funcs [] = {
 	{"service", host_service},
 	{"check_events", host_check_events},
+	{"compress_with_range_coder", host_compress_with_range_coder},
 	{"connect", host_connect},
-	{"broadcast", host_broadcast},
 	{"flush", host_flush},
+	{"broadcast", host_broadcast},
 	{"channel_limit", host_channel_limit},
 	{"bandwidth_limit", host_bandwidth_limit},
+
+	// additional convenience functions (mostly accessors)
 	{"total_sent_data", host_total_sent_data},
 	{"total_received_data", host_total_received_data},
 	{"service_time", host_service_time},
 	{"peer_count", host_peer_count},
-	{"connected_peer_count", host_connected_peer_count},
 	{"get_peer", host_get_peer},
 	{NULL, NULL}
 };
@@ -606,10 +678,15 @@ static const struct luaL_Reg enet_peer_funcs [] = {
 	{"receive", peer_receive},
 	{"send", peer_send},
 	{"throttle_configure", peer_throttle_configure},
-	{"round_trip_time", peer_round_trip_time},
-	{"last_round_trip_time", peer_last_round_trip_time},
 	{"ping_interval", peer_ping_interval},
 	{"timeout", peer_timeout},
+
+	// additional convenience functions to member variables
+	{"index", peer_index},
+	{"state", peer_state},
+	{"connect_id", peer_connect_id},
+	{"round_trip_time", peer_round_trip_time},
+	{"last_round_trip_time", peer_last_round_trip_time},
 	{NULL, NULL}
 };
 
@@ -636,7 +713,6 @@ LUALIB_API int luaopen_enet(lua_State *l) {
 	lua_pushcfunction(l, peer_tostring);
 	lua_setfield(l, -2, "__tostring");
 
-
 	// set up peer table
 	lua_newtable(l);
 
@@ -650,4 +726,3 @@ LUALIB_API int luaopen_enet(lua_State *l) {
 	luaL_register(l, "enet", enet_funcs);
 	return 0;
 }
-
