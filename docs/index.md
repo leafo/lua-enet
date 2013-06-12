@@ -8,6 +8,8 @@ To get an idea of how ENet works and what it provides have a look at
 [Features and Achritecture](http://enet.bespin.org/Features.html) from the
 original documentation.
 
+[TOC]
+
 <a name="install"></a>
 ## Download & Install
 
@@ -243,7 +245,7 @@ Enet performs some filtering on
 the round trip times and it takes some time until the parameters are
 accurate.
 
-### `peer:round_trip_time(value)`
+### `peer:last_round_trip_time(value)`
 Returns or sets the round trip time of the previous round trip time
 computation. If value is nil the current value of the peer is returned.
 Otherwise the value lastRoundTripTime is set to the specified value and
