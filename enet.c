@@ -177,7 +177,7 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 	if (argc >= idx+2 && !lua_isnil(l, idx+2)) {
 		const char *flag_str = luaL_checkstring(l, idx+2);
 		if (strcmp("unsequenced", flag_str) == 0) {
-			flags = ENET_PACKET_FLAG_RELIABLE;
+			flags = ENET_PACKET_FLAG_UNSEQUENCED;
 		} else if (strcmp("reliable", flag_str) == 0) {
 			flags = ENET_PACKET_FLAG_RELIABLE;
 		} else if (strcmp("unreliable", flag_str) == 0) {
