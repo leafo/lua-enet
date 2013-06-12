@@ -1,0 +1,327 @@
+<p><strong>lua-enet</strong> is a binding to the <a href="http://enet.bespin.org/">ENet</a> library for
+Lua. ENet is a thin network communication layer over UDP that provides high
+performance and reliable communication that is suitable for games. The
+interface exposes an asynchronous way of creating clients and servers that is
+easy to integrate into existing event loops.</p>
+<p>To get an idea of how ENet works and what it provides have a look at 
+<a href="http://enet.bespin.org/Features.html">Features and Achritecture</a> from the
+original documentation.</p>
+<div class="toc">
+<ul>
+<li><a href="#download-install">Download &amp; Install</a><ul>
+<li><a href="#linux-osx">Linux &amp; OSX</a></li>
+<li><a href="#windows">Windows</a></li>
+</ul>
+</li>
+<li><a href="#tutorial">Tutorial</a></li>
+<li><a href="#reference">Reference</a><ul>
+<li><a href="#enethost_createbind_address-peer_count-channel_count-in_bandwidth-out_bandwidth">enet.host_create([bind_address, peer_count, channel_count, in_bandwidth, out_bandwidth])</a></li>
+<li><a href="#hostconnectaddress-channel_count-data">host:connect(address [, channel_count, data])</a></li>
+<li><a href="#hostservicetimeout">host:service([timeout])</a></li>
+<li><a href="#hostcheck_events">host:check_events()</a></li>
+<li><a href="#hostcompress_with_range_coder">host:compress_with_range_coder()</a></li>
+<li><a href="#hostflush">host:flush()</a></li>
+<li><a href="#hostbroadcastdata-channel-flag">host:broadcast(data [, channel, flag])</a></li>
+<li><a href="#hostchannel_limitlimit">host:channel_limit(limit)</a></li>
+<li><a href="#hostbandwidth_limitincoming-outgoing">host:bandwidth_limit(incoming, outgoing)</a></li>
+<li><a href="#hosttotal_sent_data">host:total_sent_data()</a></li>
+<li><a href="#hosttotal_received_data">host:total_received_data()</a></li>
+<li><a href="#hostpeer_count">host:peer_count()</a></li>
+<li><a href="#hostget_peerindex">host:get_peer(index)</a></li>
+<li><a href="#peerconnect_id">peer:connect_id()</a></li>
+<li><a href="#peerdisconnectdata">peer:disconnect([data])</a></li>
+<li><a href="#peerdisconnect_nowdata">peer:disconnect_now([data])</a></li>
+<li><a href="#peerdisconnect_laterdata">peer:disconnect_later([data])</a></li>
+<li><a href="#peerindex">peer:index()</a></li>
+<li><a href="#peerping">peer:ping()</a></li>
+<li><a href="#peerping_intervalinterval">peer:ping_interval(interval)</a></li>
+<li><a href="#peerreset">peer:reset()</a></li>
+<li><a href="#peersenddata-channel-flag">peer:send(data [, channel, flag])</a></li>
+<li><a href="#peerstate">peer:state()</a></li>
+<li><a href="#peerreceive">peer:receive()</a></li>
+<li><a href="#peerround_trip_timevalue">peer:round_trip_time(value)</a></li>
+<li><a href="#peerlast_round_trip_timevalue">peer:last_round_trip_time(value)</a></li>
+<li><a href="#peerround_trip_timevalue_1">peer:round_trip_time([value])</a></li>
+<li><a href="#peerthrottle_configureinterval-acceleration-deceleration">peer:throttle_configure(interval, acceleration, deceleration)</a></li>
+<li><a href="#limit-minimum-maximum-peertimeoutlimit-minimum-maximum">(limit, minimum, maximum) peer:timeout(limit, minimum, maximum)</a></li>
+</ul>
+</li>
+<li><a href="#license-mit">License (MIT)</a></li>
+<li><a href="#contact">Contact</a></li>
+</ul>
+</div>
+<p><a name="install"></a></p>
+<h2 id="download-install">Download &amp; Install</h2>
+<h3 id="linux-osx">Linux &amp; OSX</h3>
+<p>Before installing <strong>lua-enet</strong>, you must make sure you have
+<a href="http://enet.bespin.org/">ENet</a> installed. Consult your system's package
+management.</p>
+<p>If you've got <a href="http://www.luarocks.org/">Lua Rocks</a> then installation is very easy:</p>
+<pre><code>$ luarocks install enet
+</code></pre>
+<p>Otherwise you can download the source can from GitHub:
+<a href="https://github.com/leafo/lua-enet">https://github.com/leafo/lua-enet</a></p>
+<h3 id="windows">Windows</h3>
+<p>Prebuilt binaries are provided:<br />
+</p>
+<p>Download <a href="http://leafo.net/lua-enet/bin/lua-enet-1.0.zip">http://leafo.net/lua-enet/bin/lua-enet-1.0.zip</a>.<br />
+Unzip and install alongside your Lua installation.</p>
+<p><a name="tutorial"></a></p>
+<h2 id="tutorial">Tutorial</h2>
+<p>We'll need a client and a server. A server is a <em>host</em> bound to an address.
+A client is an unbound <em>host</em> that connects to an address.
+<code>enet.host_create</code> is used to create a new host. <code>host:service</code> is used to wait
+for events and send packets. It can optionally have a specified timeout.</p>
+<p>When <code>host:service</code> receives an event it returns an event object, which is a
+plain Lua table. The <code>type</code> entry holds the kind of event as a string, and the
+<code>peer</code> entry has the associated peer who triggered the event.</p>
+<p>Using this information, we can make a simple echo server:</p>
+<pre><code>-- server.lua
+require "enet"
+local host = enet.host_create"localhost:6789"
+while true do
+    local event = host:service(100)
+    if event and event.type == "receive" then
+        print("Got message: ", event.data, event.peer)
+        event.peer:send(event.data)
+    end
+end
+</code></pre>
+<p>Data, whether sent or received, is always a Lua string. Primitive types can be
+converted to a binary string to reduce the number of bytes sent by using a binary
+serialization library.</p>
+<p>The client for our server can be written like so:</p>
+<pre><code>-- client.lua
+require "enet"
+local host = enet.host_create()
+local server = host:connect("localhost:6789")
+
+local done = false
+while not done do
+    local event = host:service(100)
+    if event then
+        if event.type == "connect" then
+            print("Connected to", event.peer)
+            event.peer:send("hello world")
+        elseif event.type == "receive" then
+            print("Got message: ", event.data, event.peer)
+            done = true
+        end
+    end
+end
+
+server:disconnect()
+host:flush()
+</code></pre>
+<p>Upon receiving the connect message we send <code>"hello world"</code> to the server, then
+wait for the response.</p>
+<p>When a client disconnects, make sure to call <code>disconnect</code> on the server object,
+and then tell the host to flush (unless <code>host:service</code> will be called again)
+otherwise the server will have to wait for the client to disconnect from timeout.</p>
+<p><a name="reference"></a></p>
+<h2 id="reference">Reference</h2>
+<h3 id="enethost_createbind_address-peer_count-channel_count-in_bandwidth-out_bandwidth"><code>enet.host_create([bind_address, peer_count, channel_count, in_bandwidth, out_bandwidth])</code></h3>
+<p>Returns a new host. All arguments are optional.</p>
+<p>A <code>bind_address</code> of <code>nil</code> makes a host that can not be connected to (typically
+a client).  Otherwise the address can either be of the form
+<code>&lt;ipaddress&gt;:&lt;port&gt;</code>, <code>&lt;hostname&gt;:&lt;port&gt;</code>, or <code>*:&lt;port&gt;</code>.</p>
+<p>Example addresses include <code>"127.0.0.1:8888"</code>, <code>"localhost:2232"</code>, and <code>"*:6767"</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>peer_count</code> max number of peers, defaults to <code>64</code></li>
+<li><code>channel_count</code> max number of channels, defaults to <code>1</code></li>
+<li><code>in_bandwidth</code> downstream bandwidth in bytes/sec, defaults to <code>0</code>
+   (unlimited)</li>
+<li><code>out_bandwidth</code> upstream bandwidth in bytes/sec, defaults to <code>0</code>
+   (unlimited)</li>
+</ul>
+<h3 id="hostconnectaddress-channel_count-data"><code>host:connect(address [, channel_count, data])</code></h3>
+<p>Connects a host to a remote host. Returns peer object associated with remote
+host.  The actual connection will not take place until the next <code>host:service</code>
+is done, in which a <code>"connect"</code> event will be generated.</p>
+<p><code>channel_count</code> is the number of channels to allocate. It should be the same as
+the channel count on the server. Defaults to <code>1</code>.</p>
+<p><code>data</code> is an integer value that can be associated with the connect event.
+Defaults to <code>0</code>.</p>
+<h3 id="hostservicetimeout"><code>host:service([timeout])</code></h3>
+<p>Wait for events, send and receive any ready packets. <code>timeout</code> is the max
+number of milliseconds to be waited for an event. By default <code>timeout</code> is <code>0</code>.
+Returns <code>nil</code> on timeout if no events occurred.</p>
+<p>If an event happens, an event table is returned. All events have a <code>type</code> entry,
+which is one of <code>"connect"</code>, <code>"disconnect"</code>, or <code>"receive"</code>. Events also have a
+<code>peer</code> entry which holds the peer object of who triggered the event.</p>
+<p>A <code>"receive"</code> event also has a <code>data</code> entry which is a Lua string containing the
+data received.</p>
+<h3 id="hostcheck_events"><code>host:check_events()</code></h3>
+<p>Checks for any queued events and dispatches one if available. Returns the
+associated event if something was dispatched, otherwise <code>nil</code>.</p>
+<h3 id="hostcompress_with_range_coder"><code>host:compress_with_range_coder()</code></h3>
+<p>Enables an adaptive order-2 PPM range coder for the transmitted data of
+all pers.</p>
+<h3 id="hostflush"><code>host:flush()</code></h3>
+<p>Sends any queued packets. This is only required to send packets earlier than
+the next call to <code>host:service</code>, or if <code>host:service</code> will not be called again.</p>
+<h3 id="hostbroadcastdata-channel-flag"><code>host:broadcast(data [, channel, flag])</code></h3>
+<p>Queues a packet to be sent to all connected peers. See
+<a href="#peersenddata__channel_flag">peer:send</a> for arguments.</p>
+<h3 id="hostchannel_limitlimit"><code>host:channel_limit(limit)</code></h3>
+<p>Sets the maximum number of channels allowed. If it is <code>0</code> then the system
+maximum allowable value is used.</p>
+<h3 id="hostbandwidth_limitincoming-outgoing"><code>host:bandwidth_limit(incoming, outgoing)</code></h3>
+<p>Sets the bandwidth limits of the host in bytes/sec. Set to <code>0</code> for unlimited.</p>
+<h3 id="hosttotal_sent_data"><code>host:total_sent_data()</code></h3>
+<p>Returns the number of bytes that were sent through the given host.</p>
+<h3 id="hosttotal_received_data"><code>host:total_received_data()</code></h3>
+<p>Returns the number of bytes that were received by the given host. </p>
+<h3 id="hostpeer_count"><code>host:peer_count()</code></h3>
+<p>Returns the number of peers that are allocated for the given host. This
+represents the maximum number of possible connections.</p>
+<h3 id="hostget_peerindex"><code>host:get_peer(index)</code></h3>
+<p>Returns the connected peer at the specified index (starting at 1). ENet
+stores all peers in an array of the corresponding host and re-uses unused
+peers for new connections. You can query the state of a peer using 
+<a href="#peerstate">peer:state</a>.</p>
+<h3 id="peerconnect_id"><code>peer:connect_id()</code></h3>
+<p>Returns the field ENetPeer::connectID that is assigned for each
+connection.</p>
+<h3 id="peerdisconnectdata"><code>peer:disconnect([data])</code></h3>
+<p>Requests a disconnection from the peer. The message is sent on the next
+<code>host:service</code> or <code>host:flush</code>.</p>
+<p><code>data</code> is optional integer value to be associated with the disconnect.</p>
+<h3 id="peerdisconnect_nowdata"><code>peer:disconnect_now([data])</code></h3>
+<p>Force immediate disconnection from peer. Foreign peer not guaranteed to receive
+disconnect notification.</p>
+<p><code>data</code> is optional integer value to be associated with the disconnect.</p>
+<h3 id="peerdisconnect_laterdata"><code>peer:disconnect_later([data])</code></h3>
+<p>Request a disconnection from peer, but only after all queued outgoing packets
+are sent.</p>
+<p><code>data</code> is optional integer value to be associated with the disconnect.</p>
+<h3 id="peerindex"><code>peer:index()</code></h3>
+<p>Returns the index of the peer. All peers of an ENet host are kept in an
+array. This function finds and returns the index of the peer of its host
+structure.</p>
+<h3 id="peerping"><code>peer:ping()</code></h3>
+<p>Send a ping request to peer, updates <code>round_trip_time</code>. This is called
+automatically at regular intervals.</p>
+<h3 id="peerping_intervalinterval"><code>peer:ping_interval(interval)</code></h3>
+<p>Specifies the interval in milliseconds that pings are sent to the other
+end of the connection (defaults to 500).</p>
+<h3 id="peerreset"><code>peer:reset()</code></h3>
+<p>Forcefully disconnects peer. The peer is not notified of the disconnection.</p>
+<h3 id="peersenddata-channel-flag"><code>peer:send(data [, channel, flag])</code></h3>
+<p>Queues a packet to be sent to peer. <code>data</code> is the contents of the packet, it
+must be a Lua string.</p>
+<p><code>channel</code> is the channel to send the packet on. Defaults to <code>0</code>.</p>
+<p><a name="peersenddata__channel_flag"></a>
+<code>flag</code> is one of <code>"reliable"</code>, <code>"unsequenced"</code>, or <code>"unreliable"</code>. Reliable
+packets are guaranteed to arrive, and arrive in the order in which they are sent.
+Unsequenced packets are unreliable and have no guarantee on the order they
+arrive. Defaults to reliable.</p>
+<p><a name="peerstate"></a></p>
+<h3 id="peerstate"><code>peer:state()</code></h3>
+<p>Returns the state of the peer as a string. This can be any of the
+following:</p>
+<ul>
+<li>"disconnected"</li>
+<li>"connecting"</li>
+<li>"acknowledging_connect"</li>
+<li>"connection_pending"</li>
+<li>"connection_succeeded"</li>
+<li>"connected"</li>
+<li>"disconnect_later"</li>
+<li>"disconnecting"</li>
+<li>"acknowledging_disconnect"</li>
+<li>"zombie"</li>
+<li>"unknown"</li>
+</ul>
+<h3 id="peerreceive"><code>peer:receive()</code></h3>
+<p>Attempts to dequeue an incoming packet for this peer.
+Returns <code>nil</code> if there are no packets waiting. Otherwise returns two values:
+the string representing the packet data, and the channel the packet came from.</p>
+<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
+<h3 id="peerround_trip_timevalue"><code>peer:round_trip_time(value)</code></h3>
+<p>Returns or sets the current round trip time (i.e. ping). If value is nil
+the current value of the peer is returned. Otherwise the value roundTripTime
+is set to the specified value and returned.</p>
+<p>Enet performs some filtering on
+the round trip times and it takes some time until the parameters are
+accurate.</p>
+<h3 id="peerlast_round_trip_timevalue"><code>peer:last_round_trip_time(value)</code></h3>
+<p>=======</p>
+<h3 id="peerround_trip_timevalue_1"><code>peer:round_trip_time([value])</code></h3>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>c6dc839b4cb5883fd5d9b6e87ceb17d8e2973455
+Returns or sets the round trip time of the previous round trip time
+computation. If value is nil the current value of the peer is returned.
+Otherwise the value lastRoundTripTime is set to the specified value and
+returned. </p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+<p>Enet performs some filtering on the round trip times and it takes
+some time until the parameters are accurate. To speed it up you can set
+the value of the round trip time to a more accurate guess.</p>
+<h3 id="peerthrottle_configureinterval-acceleration-deceleration"><code>peer:throttle_configure(interval, acceleration, deceleration)</code></h3>
+<p>Changes the probability at which unreliable packets should not be dropped.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>interval</code> interval in milliseconds to measure lowest mean RTT</li>
+<li><code>acceleration</code> rate at which to increase throttle probability as mean RTT
+   declines</li>
+<li><code>deceleration</code> rate at which to decrease throttle probability as mean RTT
+   increases</li>
+</ul>
+<h3 id="limit-minimum-maximum-peertimeoutlimit-minimum-maximum"><code>(limit, minimum, maximum) peer:timeout(limit, minimum, maximum)</code></h3>
+<p>Returns or sets the parameters when a timeout is detected. This is happens
+either after a fixed timeout or a variable timeout of time that takes the
+round trip time into account. The former is specified with the <code>maximum</code>
+parameter.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>limit</code> a factor that is multiplied with a value that based on the 
+    average round trip time to compute the timeout limit</li>
+<li><code>minimum</code> timeout value in milliseconds that a reliable packet has to
+    be acknowledged if the variable timeout limit was exceeded</li>
+<li><code>maximum</code> fixed timeout in milliseconds for which any packet has to be acknowledged</li>
+</ul>
+<p>See official enet documentation for detailed description.</p>
+</div>
+
+<p><a name="license"></a></p>
+<h2 id="license-mit">License (MIT)</h2>
+<pre><code>Copyright (C) 2011 by Leaf Corcoran
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+</code></pre>
+<p><a name="contact"></a></p>
+<h2 id="contact">Contact</h2>
+<p>Author: Leaf Corcoran (<a href="http://github.com/leafo">leafo</a>) (<a href="http://twitter.com/moonscript">@moonscript</a>)<br />
+Email: <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#101;&#97;&#102;&#111;&#116;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;">&#108;&#101;&#97;&#102;&#111;&#116;&#64;&#103;&#109;&#97;&#105;&#108;&#46;&#99;&#111;&#109;</a><br />
+Homepage: <a href="http://leafo.net">http://leafo.net</a><br />
+</p>
