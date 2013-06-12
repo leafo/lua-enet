@@ -19,6 +19,7 @@ original documentation.</p>
 <li><a href="#hostconnectaddress-channel_count-data">host:connect(address [, channel_count, data])</a></li>
 <li><a href="#hostservicetimeout">host:service([timeout])</a></li>
 <li><a href="#hostcheck_events">host:check_events()</a></li>
+<li><a href="#hostcompress_with_range_coder">host:compress_with_range_coder()</a></li>
 <li><a href="#hostflush">host:flush()</a></li>
 <li><a href="#hostbroadcastdata-channel-flag">host:broadcast(data [, channel, flag])</a></li>
 <li><a href="#hostchannel_limitlimit">host:channel_limit(limit)</a></li>
@@ -26,19 +27,23 @@ original documentation.</p>
 <li><a href="#hosttotal_sent_data">host:total_sent_data()</a></li>
 <li><a href="#hosttotal_received_data">host:total_received_data()</a></li>
 <li><a href="#hostpeer_count">host:peer_count()</a></li>
-<li><a href="#hostconnected_peer_count">host:connected_peer_count()</a></li>
 <li><a href="#hostget_peerindex">host:get_peer(index)</a></li>
-<li><a href="#peersenddata-channel-flag">peer:send(data [, channel, flag])</a></li>
+<li><a href="#peerconnect_id">peer:connect_id()</a></li>
 <li><a href="#peerdisconnectdata">peer:disconnect([data])</a></li>
 <li><a href="#peerdisconnect_nowdata">peer:disconnect_now([data])</a></li>
 <li><a href="#peerdisconnect_laterdata">peer:disconnect_later([data])</a></li>
-<li><a href="#peerreset">peer:reset()</a></li>
+<li><a href="#peerindex">peer:index()</a></li>
 <li><a href="#peerping">peer:ping()</a></li>
-<li><a href="#peerthrottle_configureinterval-acceleration-deceleration">peer:throttle_configure(interval, acceleration, deceleration)</a></li>
+<li><a href="#peerping_intervalinterval">peer:ping_interval(interval)</a></li>
+<li><a href="#peerreset">peer:reset()</a></li>
+<li><a href="#peersenddata-channel-flag">peer:send(data [, channel, flag])</a></li>
+<li><a href="#peerstate">peer:state()</a></li>
 <li><a href="#peerreceive">peer:receive()</a></li>
 <li><a href="#peerround_trip_timevalue">peer:round_trip_time(value)</a></li>
 <li><a href="#peerlast_round_trip_timevalue">peer:last_round_trip_time(value)</a></li>
-<li><a href="#limit-minimum-maximum-peertimeoutlimit-minimum-maximum">limit, minimum, maximum peer:timeout(limit, minimum, maximum)</a></li>
+<li><a href="#peerround_trip_timevalue_1">peer:round_trip_time([value])</a></li>
+<li><a href="#peerthrottle_configureinterval-acceleration-deceleration">peer:throttle_configure(interval, acceleration, deceleration)</a></li>
+<li><a href="#limit-minimum-maximum-peertimeoutlimit-minimum-maximum">(limit, minimum, maximum) peer:timeout(limit, minimum, maximum)</a></li>
 </ul>
 </li>
 <li><a href="#license-mit">License (MIT)</a></li>
@@ -113,8 +118,7 @@ wait for the response.</p>
 <p>When a client disconnects, make sure to call <code>disconnect</code> on the server object,
 and then tell the host to flush (unless <code>host:service</code> will be called again)
 otherwise the server will have to wait for the client to disconnect from timeout.</p>
-<p><a name="reference"></a>
-<div class="api"></p>
+<p><a name="reference"></a></p>
 <h2 id="reference">Reference</h2>
 <h3 id="enethost_createbind_address-peer_count-channel_count-in_bandwidth-out_bandwidth"><code>enet.host_create([bind_address, peer_count, channel_count, in_bandwidth, out_bandwidth])</code></h3>
 <p>Returns a new host. All arguments are optional.</p>
@@ -151,6 +155,9 @@ data received.</p>
 <h3 id="hostcheck_events"><code>host:check_events()</code></h3>
 <p>Checks for any queued events and dispatches one if available. Returns the
 associated event if something was dispatched, otherwise <code>nil</code>.</p>
+<h3 id="hostcompress_with_range_coder"><code>host:compress_with_range_coder()</code></h3>
+<p>Enables an adaptive order-2 PPM range coder for the transmitted data of
+all pers.</p>
 <h3 id="hostflush"><code>host:flush()</code></h3>
 <p>Sends any queued packets. This is only required to send packets earlier than
 the next call to <code>host:service</code>, or if <code>host:service</code> will not be called again.</p>
@@ -169,26 +176,14 @@ maximum allowable value is used.</p>
 <h3 id="hostpeer_count"><code>host:peer_count()</code></h3>
 <p>Returns the number of peers that are allocated for the given host. This
 represents the maximum number of possible connections.</p>
-<h3 id="hostconnected_peer_count"><code>host:connected_peer_count()</code></h3>
-<p>Returns the number of connected (i.e. active) peers.</p>
 <h3 id="hostget_peerindex"><code>host:get_peer(index)</code></h3>
-<p>Returns the connected peer at the specified index (starting at 1). Please
-note that it is not guaranteed that the index stays the same for a single
-peer over time as enet pre-allocates memory in an array for all peers and
-sets their state to <code>connected</code> when a connection is established.</p>
-<p>For peers with closed connections the internal state is set to
-<code>disconnected</code>. The function <code>host:get_peer(i)</code> loops over all connections
-and returns the i-th connection that is active. If a peer with index j and
-j &lt; i is disconnected all peers with index i and i &gt; j have now index i -
-1.</p>
-<h3 id="peersenddata-channel-flag"><code>peer:send(data [, channel, flag])</code></h3>
-<p>Queues a packet to be sent to peer. <code>data</code> is the contents of the packet, it
-must be a Lua string.</p>
-<p><code>channel</code> is the channel to send the packet on. Defaults to <code>0</code>.</p>
-<p><code>flag</code> is one of <code>"reliable"</code>, <code>"unsequenced"</code>, or <code>"unreliable"</code>. Reliable
-packets are guaranteed to arrive, and arrive in the order in which they are sent.
-Unsequenced packets are unreliable and have no guarantee on the order they
-arrive. Defaults to reliable.</p>
+<p>Returns the connected peer at the specified index (starting at 1). ENet
+stores all peers in an array of the corresponding host and re-uses unused
+peers for new connections. You can query the state of a peer using 
+<a href="#peerstate">peer:state</a>.</p>
+<h3 id="peerconnect_id"><code>peer:connect_id()</code></h3>
+<p>Returns the field ENetPeer::connectID that is assigned for each
+connection.</p>
 <h3 id="peerdisconnectdata"><code>peer:disconnect([data])</code></h3>
 <p>Requests a disconnection from the peer. The message is sent on the next
 <code>host:service</code> or <code>host:flush</code>.</p>
@@ -201,11 +196,81 @@ disconnect notification.</p>
 <p>Request a disconnection from peer, but only after all queued outgoing packets
 are sent.</p>
 <p><code>data</code> is optional integer value to be associated with the disconnect.</p>
-<h3 id="peerreset"><code>peer:reset()</code></h3>
-<p>Forcefully disconnects peer. The peer is not notified of the disconnection.</p>
+<h3 id="peerindex"><code>peer:index()</code></h3>
+<p>Returns the index of the peer. All peers of an ENet host are kept in an
+array. This function finds and returns the index of the peer of its host
+structure.</p>
 <h3 id="peerping"><code>peer:ping()</code></h3>
 <p>Send a ping request to peer, updates <code>round_trip_time</code>. This is called
 automatically at regular intervals.</p>
+<h3 id="peerping_intervalinterval"><code>peer:ping_interval(interval)</code></h3>
+<p>Specifies the interval in milliseconds that pings are sent to the other
+end of the connection (defaults to 500).</p>
+<h3 id="peerreset"><code>peer:reset()</code></h3>
+<p>Forcefully disconnects peer. The peer is not notified of the disconnection.</p>
+<h3 id="peersenddata-channel-flag"><code>peer:send(data [, channel, flag])</code></h3>
+<p>Queues a packet to be sent to peer. <code>data</code> is the contents of the packet, it
+must be a Lua string.</p>
+<p><code>channel</code> is the channel to send the packet on. Defaults to <code>0</code>.</p>
+<p><a name="peersenddata__channel_flag"></a>
+<code>flag</code> is one of <code>"reliable"</code>, <code>"unsequenced"</code>, or <code>"unreliable"</code>. Reliable
+packets are guaranteed to arrive, and arrive in the order in which they are sent.
+Unsequenced packets are unreliable and have no guarantee on the order they
+arrive. Defaults to reliable.</p>
+<p><a name="peerstate"></a></p>
+<h3 id="peerstate"><code>peer:state()</code></h3>
+<p>Returns the state of the peer as a string. This can be any of the
+following:</p>
+<ul>
+<li>"disconnected"</li>
+<li>"connecting"</li>
+<li>"acknowledging_connect"</li>
+<li>"connection_pending"</li>
+<li>"connection_succeeded"</li>
+<li>"connected"</li>
+<li>"disconnect_later"</li>
+<li>"disconnecting"</li>
+<li>"acknowledging_disconnect"</li>
+<li>"zombie"</li>
+<li>"unknown"</li>
+</ul>
+<h3 id="peerreceive"><code>peer:receive()</code></h3>
+<p>Attempts to dequeue an incoming packet for this peer.
+Returns <code>nil</code> if there are no packets waiting. Otherwise returns two values:
+the string representing the packet data, and the channel the packet came from.</p>
+<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
+<h3 id="peerround_trip_timevalue"><code>peer:round_trip_time(value)</code></h3>
+<p>Returns or sets the current round trip time (i.e. ping). If value is nil
+the current value of the peer is returned. Otherwise the value roundTripTime
+is set to the specified value and returned.</p>
+<p>Enet performs some filtering on
+the round trip times and it takes some time until the parameters are
+accurate.</p>
+<h3 id="peerlast_round_trip_timevalue"><code>peer:last_round_trip_time(value)</code></h3>
+<p>=======</p>
+<h3 id="peerround_trip_timevalue_1"><code>peer:round_trip_time([value])</code></h3>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>c6dc839b4cb5883fd5d9b6e87ceb17d8e2973455
+Returns or sets the round trip time of the previous round trip time
+computation. If value is nil the current value of the peer is returned.
+Otherwise the value lastRoundTripTime is set to the specified value and
+returned. </p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+<p>Enet performs some filtering on the round trip times and it takes
+some time until the parameters are accurate. To speed it up you can set
+the value of the round trip time to a more accurate guess.</p>
 <h3 id="peerthrottle_configureinterval-acceleration-deceleration"><code>peer:throttle_configure(interval, acceleration, deceleration)</code></h3>
 <p>Changes the probability at which unreliable packets should not be dropped.</p>
 <p>Parameters:</p>
@@ -216,25 +281,7 @@ automatically at regular intervals.</p>
 <li><code>deceleration</code> rate at which to decrease throttle probability as mean RTT
    increases</li>
 </ul>
-<h3 id="peerreceive"><code>peer:receive()</code></h3>
-<p>Attempts to dequeue an incoming packet for this peer.
-Returns <code>nil</code> if there are no packets waiting. Otherwise returns two values:
-the string representing the packet data, and the channel the packet came from.</p>
-<h3 id="peerround_trip_timevalue"><code>peer:round_trip_time(value)</code></h3>
-<p>Returns or sets the current round trip time (i.e. ping). If value is nil
-the current value of the peer is returned. Otherwise the value roundTripTime
-is set to the specified value and returned.</p>
-<p>Enet performs some filtering on
-the round trip times and it takes some time until the parameters are
-accurate.</p>
-<h3 id="peerlast_round_trip_timevalue"><code>peer:last_round_trip_time(value)</code></h3>
-<p>Returns or sets the round trip time of the previous round trip time
-computation. If value is nil the current value of the peer is returned.
-Otherwise the value lastRoundTripTime is set to the specified value and
-returned. </p>
-<p>Enet performs some filtering on the round trip times and it takes
-some time until the parameters are accurate.</p>
-<h3 id="limit-minimum-maximum-peertimeoutlimit-minimum-maximum"><code>limit, minimum, maximum peer:timeout(limit, minimum, maximum)</code></h3>
+<h3 id="limit-minimum-maximum-peertimeoutlimit-minimum-maximum"><code>(limit, minimum, maximum) peer:timeout(limit, minimum, maximum)</code></h3>
 <p>Returns or sets the parameters when a timeout is detected. This is happens
 either after a fixed timeout or a variable timeout of time that takes the
 round trip time into account. The former is specified with the <code>maximum</code>

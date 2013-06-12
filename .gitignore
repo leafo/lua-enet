@@ -1,4 +1,9 @@
 *.so
 *.o
+<<<<<<< HEAD
 /*.lua
 .*.swp
+=======
+.*.swp
+/*.lua
+>>>>>>> c6dc839b4cb5883fd5d9b6e87ceb17d8e2973455
