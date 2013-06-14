@@ -169,6 +169,9 @@ Returns the number of bytes that were sent through the given host.
 ### `host:total_received_data()`
 Returns the number of bytes that were received by the given host. 
 
+### `host:service_time()`
+Returns the timestamp of the last call to host:service() or host:flush().
+
 ### `host:peer_count()`
 Returns the number of peers that are allocated for the given host. This
 represents the maximum number of possible connections.
@@ -252,6 +255,14 @@ Returns `nil` if there are no packets waiting. Otherwise returns two values:
 the string representing the packet data, and the channel the packet came from.
 
 ### `peer:round_trip_time([value])`
+Returns or sets the current round trip time (i.e. ping). If value is nil
+the current value of the peer is returned. Otherwise the value roundTripTime
+is set to the specified value and returned.
+
+Enet performs some filtering on the round trip times and it takes some time
+until the parameters are accurate.
+
+### `peer:last_round_trip_time([value])`
 Returns or sets the round trip time of the previous round trip time
 computation. If value is nil the current value of the peer is returned.
 Otherwise the value lastRoundTripTime is set to the specified value and
@@ -259,7 +270,7 @@ returned.
 
 Enet performs some filtering on the round trip times and it takes
 some time until the parameters are accurate. To speed it up you can set
-the value of the round trip time to a more accurate guess.
+the value of the last round trip time to a more accurate guess.
 
 ### `peer:throttle_configure(interval, acceleration, deceleration)`
 Changes the probability at which unreliable packets should not be dropped.
