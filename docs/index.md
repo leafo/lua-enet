@@ -8,7 +8,7 @@ To get an idea of how ENet works and what it provides have a look at
 [Features and Achritecture](http://enet.bespin.org/Features.html) from the
 original documentation.
 
-[TOC]
+<div class="index">$index</div>
 
 <a name="install"></a>
 ## Download & Install
