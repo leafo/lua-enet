@@ -202,6 +202,12 @@ stores all peers in an array of the corresponding host and re-uses unused
 peers for new connections. You can query the state of a peer using 
 [peer:state](#peerstate).
 
+### `host:get_socket_address()`
+
+Returns a string that describes the socket address of the given host. The
+string is formatted as "a.b.c.d:port", where "a.b.c.d" is the ip address of
+the used socket.
+
 ### `peer:connect_id()`
 
 Returns the field ENetPeer::connectID that is assigned for each
