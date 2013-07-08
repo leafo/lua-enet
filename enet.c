@@ -407,7 +407,7 @@ static int host_peer_count(lua_State *l) {
 static int host_get_peer(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
 
-	int peer_index = luaL_checkint(l, 2) - 1;
+	size_t peer_index = (size_t) luaL_checkint(l, 2) - 1;
 
 	if (peer_index < 0 || peer_index >= host->peerCount) {
 		luaL_argerror (l, 2, "Invalid peer index");
