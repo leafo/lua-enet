@@ -250,6 +250,26 @@ static int host_create(lua_State *l) {
 	return 1;
 }
 
+static int linked_version(lua_State *l) {
+	char* enet_version_str = (char*) malloc (sizeof(char) * 32);
+
+	if (enet_version_str == NULL) {
+		luaL_error(l, "Error allocating memory for version string.");
+	}
+
+	snprintf (enet_version_str, sizeof(char) * 32, "%d.%d.%d",
+			ENET_VERSION_GET_MAJOR(enet_linked_version()),
+			ENET_VERSION_GET_MINOR(enet_linked_version()),
+			ENET_VERSION_GET_PATCH(enet_linked_version())
+			);
+
+	lua_pushstring (l, enet_version_str);
+
+	free (enet_version_str);
+
+	return 1;
+}
+
 /**
  * Serice a host
  * Args:
@@ -379,12 +399,15 @@ static int host_socket_get_address(lua_State *l) {
 	enet_socket_get_address (host->socket, &address);
 
 	char* address_str = (char *) malloc(sizeof(char) * 64);
+	if (address_str == NULL) {
+		luaL_error(l, "Error allocating memory for address string.");
+	}
 
-	snprintf (address_str, sizeof(char) * 64, "%d.%d.%d.%d:%d\n",
-			((address.host) & 0x000000FF),
-			((address.host >> 8) & 0x000000FF),
-			((address.host >> 16) & 0x000000FF),
-			(address.host >> 24& 0x000000FF),
+	snprintf (address_str, sizeof(char) * 64, "%d.%d.%d.%d:%d",
+			((address.host) & 0xFF),
+			((address.host >> 8) & 0xFF),
+			((address.host >> 16) & 0xFF),
+			(address.host >> 24& 0xFF),
 			address.port);
 
 	lua_pushstring(l, address_str);
@@ -667,6 +690,7 @@ static int peer_send(lua_State *l) {
 
 static const struct luaL_Reg enet_funcs [] = {
 	{"host_create", host_create},
+	{"linked_version", linked_version},
 	{NULL, NULL}
 };
 
