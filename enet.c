@@ -17,7 +17,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING IN
  * THE SOFTWARE.
  */
 
@@ -27,7 +27,6 @@
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
-
 #include <enet/enet.h>
 
 #define check_host(l, idx)\
@@ -186,6 +185,7 @@ static ENetPacket *read_packet(lua_State *l, int idx, enet_uint8 *channel_id) {
 			luaL_error(l, "Unknown packet flag: %s", flag_str);
 		}
 	}
+
 	if (argc >= idx+1 && !lua_isnil(l, idx+1)) {
 		*channel_id = luaL_checkint(l, idx+1);
 	}
@@ -373,6 +373,26 @@ static int host_bandwidth_limit(lua_State *l) {
 	return 0;
 }
 
+static int host_socket_get_address(lua_State *l) {
+	ENetHost *host = check_host(l, 1);
+	ENetAddress address;
+	enet_socket_get_address (host->socket, &address);
+
+	char* address_str = (char *) malloc(sizeof(char) * 64);
+
+	snprintf (address_str, sizeof(char) * 64, "%d.%d.%d.%d:%d\n",
+			((address.host) & 0x000000FF),
+			((address.host >> 8) & 0x000000FF),
+			((address.host >> 16) & 0x000000FF),
+			(address.host >> 24& 0x000000FF),
+			address.port);
+
+	lua_pushstring(l, address_str);
+
+	free (address_str);
+
+	return 1;
+}
 static int host_total_sent_data(lua_State *l) {
 	ENetHost *host = check_host(l, 1);
 
@@ -659,6 +679,7 @@ static const struct luaL_Reg enet_host_funcs [] = {
 	{"broadcast", host_broadcast},
 	{"channel_limit", host_channel_limit},
 	{"bandwidth_limit", host_bandwidth_limit},
+	{"socket_get_address", host_socket_get_address},
 
 	// additional convenience functions (mostly accessors)
 	{"total_sent_data", host_total_sent_data},
@@ -694,7 +715,7 @@ static const struct luaL_Reg enet_event_funcs [] = {
 	{NULL, NULL}
 };
 
-LUALIB_API int luaopen_enet(lua_State *l) {
+int luaopen_enet(lua_State *l) {
 	enet_initialize();
 	atexit(enet_deinitialize);
 
