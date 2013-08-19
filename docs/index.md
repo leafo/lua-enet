@@ -33,7 +33,7 @@ Otherwise you can download the source can from GitHub:
 
 Prebuilt binaries are provided:  
 
-Download <http://leafo.net/lua-enet/bin/lua-enet-1.0.zip>.  
+Download <http://leafo.net/lua-enet/bin/lua-enet-1.1.zip>.  
 Unzip and install alongside your Lua installation.
 
 <a name="tutorial"></a>
