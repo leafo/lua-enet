@@ -91,10 +91,10 @@ while not done do
     end
   end
 end
-```
 
 server:disconnect()
 host:flush()
+```
 
 Upon receiving the connect message we send `"hello world"` to the server, then
 wait for the response.
@@ -273,17 +273,17 @@ arrive. Defaults to reliable.
 Returns the state of the peer as a string. This can be any of the
 following:
 
- * "disconnected"
- * "connecting"
- * "acknowledging_connect"
- * "connection_pending"
- * "connection_succeeded"
- * "connected"
- * "disconnect_later"
- * "disconnecting"
- * "acknowledging_disconnect"
- * "zombie"
- * "unknown"
+ * `"disconnected"`
+ * `"connecting"`
+ * `"acknowledging_connect"`
+ * `"connection_pending"`
+ * `"connection_succeeded"`
+ * `"connected"`
+ * `"disconnect_later"`
+ * `"disconnecting"`
+ * `"acknowledging_disconnect"`
+ * `"zombie"`
+ * `"unknown"`
 
 ### `peer:receive()`
 
