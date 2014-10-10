@@ -6,6 +6,17 @@ base_port = 112344
 moon = require "moon"
 
 describe "enet", ->
+  it "should gc host", ->
+    do
+      client = enet.host_create()
+    collectgarbage!
+
+  it "should gc destroyed host", ->
+    do
+      client = enet.host_create()
+      client\destroy!
+    collectgarbage!
+
   it "should host and client", ->
     host = enet.host_create "localhost:#{base_port}"
     assert.truthy host
@@ -32,3 +43,8 @@ describe "enet", ->
     assert.same "receive", client_event.type
     assert.same "Hello World", client_event.data
 
+  it "should error on destroyed host", ->
+    client = enet.host_create()
+    client\destroy!
+    assert.has_error ->
+      client\connect "localhost:7889"
