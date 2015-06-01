@@ -476,7 +476,7 @@ static int host_get_peer(lua_State *l) {
 
 	size_t peer_index = (size_t) luaL_checkint(l, 2) - 1;
 
-	if (peer_index < 0 || peer_index >= host->peerCount) {
+	if (peer_index >= host->peerCount) {
 		luaL_argerror (l, 2, "Invalid peer index");
 	}
 
@@ -765,10 +765,6 @@ static const struct luaL_Reg enet_peer_funcs [] = {
 	{"connect_id", peer_connect_id},
 	{"round_trip_time", peer_round_trip_time},
 	{"last_round_trip_time", peer_last_round_trip_time},
-	{NULL, NULL}
-};
-
-static const struct luaL_Reg enet_event_funcs [] = {
 	{NULL, NULL}
 };
 
