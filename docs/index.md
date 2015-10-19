@@ -137,6 +137,10 @@ the channel count on the server. Defaults to `1`.
 `data` is an integer value that can be associated with the connect event.
 Defaults to `0`.
 
+### `host:destroy()`
+
+Destroys host, freeing up the port it's bound to. Automatically called when `host` is garbage collected.
+
 ### `host:service([timeout])`
 
 Wait for events, send and receive any ready packets. `timeout` is the max
