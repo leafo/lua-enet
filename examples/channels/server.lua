@@ -1,5 +1,5 @@
 
-require "enet"
+local enet =require "enet"
 
 local channel_responders = {
 	[0] = function(event)
