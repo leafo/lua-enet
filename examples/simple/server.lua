@@ -1,4 +1,4 @@
-require "enet"
+local enet = require "enet"
 
 local host = enet.host_create"localhost:5678"
 

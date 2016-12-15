@@ -24,13 +24,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-// For lua5.2 support, instead we could replace all the luaL_register's with whatever
-// lua5.2's equivalent function is, but this is easier so whatever.
-#define LUA_COMPAT_MODULE
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
+
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 #include <enet/enet.h>
+
+#if LUA_VERSION_NUM < 502
+#  define luaL_newlib(L,l) (lua_newtable(L), luaL_register(L,NULL,l))
+#endif
+
+#if LUA_VERSION_NUM >= 502
+#ifndef luaL_checkint
+#define luaL_checkint luaL_checkinteger
+#endif
+#endif
 
 #define check_host(l, idx)\
 	*(ENetHost**)luaL_checkudata(l, idx, "enet_host")
@@ -778,15 +786,13 @@ int luaopen_enet(lua_State *l) {
 
 	// create metatables
 	luaL_newmetatable(l, "enet_host");
-	lua_newtable(l); // index
-	luaL_register(l, NULL, enet_host_funcs);
+	luaL_newlib(l, enet_host_funcs);
 	lua_setfield(l, -2, "__index");
 	lua_pushcfunction(l, host_gc);
 	lua_setfield(l, -2, "__gc");
 
 	luaL_newmetatable(l, "enet_peer");
-	lua_newtable(l);
-	luaL_register(l, NULL, enet_peer_funcs);
+	luaL_newlib(l, enet_peer_funcs);
 	lua_setfield(l, -2, "__index");
 	lua_pushcfunction(l, peer_tostring);
 	lua_setfield(l, -2, "__tostring");
@@ -801,6 +807,6 @@ int luaopen_enet(lua_State *l) {
 
 	lua_setfield(l, LUA_REGISTRYINDEX, "enet_peers");
 
-	luaL_register(l, "enet", enet_funcs);
+	luaL_newlib(l, enet_funcs);
 	return 1;
 }
