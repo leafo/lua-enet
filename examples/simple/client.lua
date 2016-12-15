@@ -1,5 +1,5 @@
 
-require "enet"
+local enet = require "enet"
 
 local host = enet.host_create()
 local server = host:connect("localhost:5678")
