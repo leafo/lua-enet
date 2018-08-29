@@ -1,17 +1,17 @@
 /**
  *
  * Copyright (C) 2014 by Leaf Corcoran
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -486,6 +486,28 @@ static int host_get_peer(lua_State *l) {
 	return 1;
 }
 
+static int host_send(lua_State* l) {
+	ENetHost *host = check_host(l, 1);
+	if (!host) {
+		return luaL_error(l, "Tried to index a nil host!");
+	}
+
+	ENetAddress address;
+	parse_address(l, luaL_checkstring(l, 2), &address);
+
+	size_t size;
+	const void *data = luaL_checklstring(l, 3, &size);
+
+	ENetBuffer buffer;
+	// Casting away the const here is dangerous, but it seems to work well.
+	buffer.data = (void*)data;
+	buffer.dataLength = size;
+
+	enet_socket_send(host->socket, &address, &buffer, 1);
+
+	return 0;
+}
+
 static int host_gc(lua_State *l) {
 	// We have to manually grab the userdata so that we can set it to NULL.
 	ENetHost** host = luaL_checkudata(l, 1, "enet_host");
@@ -744,6 +766,7 @@ static const struct luaL_Reg enet_host_funcs [] = {
 	{"service_time", host_service_time},
 	{"peer_count", host_peer_count},
 	{"get_peer", host_get_peer},
+	{"send_from_socket", host_send},
 	{NULL, NULL}
 };
 
@@ -772,7 +795,7 @@ static const struct luaL_Reg enet_event_funcs [] = {
 	{NULL, NULL}
 };
 
-int luaopen_enet(lua_State *l) {
+int luaopen_enet2(lua_State *l) {
 	enet_initialize();
 	atexit(enet_deinitialize);
 

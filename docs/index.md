@@ -271,6 +271,8 @@ packets are guaranteed to arrive, and arrive in the order in which they are sent
 Unsequenced packets are unreliable and have no guarantee on the order they
 arrive. Defaults to reliable.
 
+Returns 0 on success and < 0 on failure.
+
 <a name="peerstate"></a>
 ### `peer:state()`
 
