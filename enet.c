@@ -1,17 +1,17 @@
 /**
  *
  * Copyright (C) 2014 by Leaf Corcoran
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -31,6 +31,10 @@
 #include "lualib.h"
 #include "lauxlib.h"
 #include <enet/enet.h>
+
+#ifdef LUA54PATCH
+#define luaL_checkint luaL_checkinteger
+#endif
 
 #define check_host(l, idx)\
 	*(ENetHost**)luaL_checkudata(l, idx, "enet_host")
@@ -779,14 +783,22 @@ int luaopen_enet(lua_State *l) {
 	// create metatables
 	luaL_newmetatable(l, "enet_host");
 	lua_newtable(l); // index
+	#ifdef LUA54PATCH
+	luaL_setfuncs(l,enet_host_funcs,0);
+	#else
 	luaL_register(l, NULL, enet_host_funcs);
+	#endif
 	lua_setfield(l, -2, "__index");
 	lua_pushcfunction(l, host_gc);
 	lua_setfield(l, -2, "__gc");
 
 	luaL_newmetatable(l, "enet_peer");
 	lua_newtable(l);
+	#ifdef LUA54PATCH
+	luaL_setfuncs(l,enet_peer_funcs,0);
+	#else
 	luaL_register(l, NULL, enet_peer_funcs);
+	#endif
 	lua_setfield(l, -2, "__index");
 	lua_pushcfunction(l, peer_tostring);
 	lua_setfield(l, -2, "__tostring");
@@ -801,6 +813,12 @@ int luaopen_enet(lua_State *l) {
 
 	lua_setfield(l, LUA_REGISTRYINDEX, "enet_peers");
 
+#ifdef LUA54PATCH
+	luaL_newlibtable(l,enet_funcs);
+	luaL_setfuncs(l,enet_funcs,0);
+	lua_setglobal(l,"enet");
+#else
 	luaL_register(l, "enet", enet_funcs);
+#endif
 	return 1;
 }
